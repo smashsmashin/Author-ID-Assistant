@@ -1,0 +1,11 @@
+/.gradle
+/.vscode
+/app/build
+/build
+/gradle
+/gradlew
+/gradlew.bat
+/install.sh
+/pair.sh
+/replace.sh
+/tail.sh

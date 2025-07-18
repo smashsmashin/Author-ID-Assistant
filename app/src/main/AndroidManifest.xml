@@ -1,0 +1,36 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="app.smashsmashin.authoridassistant">
+
+    <application
+        android:allowBackup="true"
+        android:label="Author ID Assistant"
+        android:supportsRtl="true"
+        android:enabled="true"
+        android:theme="@android:style/Theme.DeviceDefault">
+
+        <receiver android:name=".BootReceiver" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="app.smashsmashin.authoridassistant.START" />
+            </intent-filter>
+        </receiver>
+
+        <receiver android:name=".PowerReceiver" android:exported="false" />
+
+        <service
+            android:name=".MyAccessibilityService"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/accessibility_service_config" />
+        </service>
+
+    </application>
+
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+</manifest>
