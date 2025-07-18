@@ -17,6 +17,9 @@ public class BootReceiver extends BroadcastReceiver {
         filter.addAction(Intent.ACTION_SCREEN_ON);
         filter.addAction(Intent.ACTION_SCREEN_OFF);
         filter.addAction(Intent.ACTION_USER_PRESENT);
+        filter.addAction(Intent.ACTION_POWER_CONNECTED);
+        filter.addAction(Intent.ACTION_POWER_DISCONNECTED);
+        filter.addAction(Intent.ACTION_BATTERY_CHANGED);
 
         context.getApplicationContext().registerReceiver(new PowerReceiver(), filter);
     }
