@@ -37,7 +37,7 @@ public class MyNotificationListenerService extends NotificationListenerService {
                 }
 
                 if (isWirelessChargingServiceScope) {
-                    if (!isDeviceLocked(context)) {
+                    if (isDeviceUnlocked(context)) {
                         if (!activityLaunched) {
                             Log.d(TAG, "BroadcastReceiver: Device unlocked and wireless charging. Triggering action.");
                             AppState.shouldActivate = true;
@@ -83,7 +83,7 @@ public class MyNotificationListenerService extends NotificationListenerService {
             }
         }
 
-        private boolean isDeviceLocked(Context context) {
+        private boolean isDeviceUnlocked(Context context) {
             KeyguardManager keyguardManager = (KeyguardManager) context.getSystemService(Context.KEYGUARD_SERVICE);
             return keyguardManager != null && !keyguardManager.isDeviceLocked();
         }
