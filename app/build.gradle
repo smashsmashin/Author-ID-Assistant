@@ -6,7 +6,7 @@ android {
 
     defaultConfig {
         applicationId "app.smashsmashin.authoridassistant"
-        minSdkVersion 26
+        minSdkVersion 28
         targetSdkVersion 34
         versionCode 1
         versionName "1.0"
