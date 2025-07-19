@@ -14,10 +14,27 @@ android {
         // No UI needed
     }
 
+    if(project.hasProperty("signing.properties")
+        && new File(project.property("signing.properties")).exists()) {
+
+        Properties props = new Properties()
+        props.load(new FileInputStream(new File(project.property("signing.properties"))))
+
+        signingConfigs {
+            release {
+                storeFile file(props['keystore'])
+                keyAlias props['keyAlias']
+                storePassword props['keystore.password']
+                keyPassword props['keyPassword']
+            }
+        }
+    }
+
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.release
         }
     }
 }
