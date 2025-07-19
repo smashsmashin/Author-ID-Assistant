@@ -13,15 +13,20 @@ public class AppState {
     public static boolean isKeyFobActionPending = false;
     public static boolean shouldActivate = false;
     private static Handler handler = new Handler(Looper.getMainLooper());
-    private static Object handlerToken = new Object();
+    private static int timers = 0;
 
     public static void cancelAllTimers() {
-        handler.removeCallbacksAndMessages(handlerToken);
+        handler.removeCallbacksAndMessages(AppState.class);
+        if(timers > 0) {
+            Log.d(TAG, "Canceled " + timers + " timers.");
+            timers = 0;
+        }
     }
 
     private static void startTimer(Runnable r, long millis) {
-        handler.postDelayed(r, handlerToken, millis);
+        handler.postDelayed(r, AppState.class, millis);
         Log.d(TAG, "Started " + (millis / 1000) + " seconds timer.");
+        timers++;
     }
 
     public static void triggerAuthorIDActivity(Context context) {
@@ -34,6 +39,7 @@ public class AppState {
 
             // Start a 30-seconds timer
             startTimer(() -> {
+                timers--;
                 Log.d(TAG, "30-seconds timer finished. Attempting to unccheck button.");
                 isKeyFobActionPending = true;
                 shouldActivate = false;
