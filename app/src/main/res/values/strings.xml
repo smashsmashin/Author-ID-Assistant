@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">WirelessUnlock</string>
-    <string name="accessibility_service_description">This service allows the app to click a button on another app\'s screen.</string>
+    <string name="app_name">Author ID Assistant</string>
+    <string name="accessibility_service_description">This service allows the app to click a button on Author ID app\'s screen.</string>
 </resources>
