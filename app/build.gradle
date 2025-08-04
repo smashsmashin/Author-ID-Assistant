@@ -1,8 +1,8 @@
 apply plugin: 'com.android.application'
 
 android {
-    namespace 'app.smashsmashin.authoridassistant'
-    compileSdkVersion 34
+    namespace = 'app.smashsmashin.authoridassistant'
+    compileSdkVersion = 34
 
     defaultConfig {
         applicationId "app.smashsmashin.authoridassistant"
@@ -12,6 +12,17 @@ android {
         versionName "1.0"
 
         // No UI needed
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    gradle.projectsEvaluated {
+        tasks.withType(JavaCompile) {
+            options.compilerArgs << "-Xlint:deprecation"
+        }
     }
 
     if(project.hasProperty("signing.properties")
@@ -34,11 +45,41 @@ android {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            signingConfig signingConfigs.release
+            if(project.hasProperty("signing.properties")
+                && new File(project.property("signing.properties")).exists()) {
+                signingConfig signingConfigs.release
+            }
         }
+    }
+
+    testOptions {
+        unitTests {
+            includeAndroidResources = true
+        }
+    }
+
+    lintOptions {
+        // Disable the MissingPermission warning for specific files where permissions are properly declared
+        disable 'MissingPermission'
+        // Enable other important lint checks
+        enable 'Deprecated', 'ObsoleteSdkInt'
     }
 }
 
 dependencies {
     implementation 'androidx.core:core:1.13.1'
+    implementation 'com.google.code.gson:gson:2.11.0'
+    
+    // Testing dependencies
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.robolectric:robolectric:4.15.1'
+    testImplementation 'org.mockito:mockito-core:5.14.2'
+    testImplementation 'org.mockito:mockito-inline:5.2.0'
+    
+    // Android instrumentation testing
+    androidTestImplementation 'androidx.test.ext:junit:1.2.1'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.6.1'
+    androidTestImplementation 'androidx.test:core:1.6.1'
+    androidTestImplementation 'androidx.test:runner:1.6.2'
+    androidTestImplementation 'androidx.test:rules:1.6.1'
 }
