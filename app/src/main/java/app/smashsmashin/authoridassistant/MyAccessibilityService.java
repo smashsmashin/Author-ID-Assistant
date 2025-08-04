@@ -168,7 +168,9 @@ public class MyAccessibilityService extends AccessibilityService {
           }, 500);
         }
       } else if (Intent.ACTION_SCREEN_OFF.equals(action)) {
-        AppState.cancelAllTimers();
+        // Screen off handling is now managed by KeyFobMonitorService
+        // This ensures we don't have duplicate handling
+        Log.d(TAG, "BroadcastReceiver: Screen off event - KeyFobMonitorService will handle Key FOB deactivation");
       }
     }
 

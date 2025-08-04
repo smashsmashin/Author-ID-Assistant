@@ -10,6 +10,8 @@ This application operates discreetly in the background, requiring specific user-
 
 *   **Conditional Key FOB Activation:** Automatically enables Author-ID Key FOB for a limited time (30 seconds) upon specific unlock conditions related to wireless charging.
 *   **Enhanced Security:** Disables Key FOB when not actively charging or unlocking under the specified conditions.
+*   **Screen State Monitoring:** Automatically disables Key FOB when the screen turns off, preventing security vulnerabilities (NEW).
+*   **Foreground Service Notification:** Shows a persistent notification while Key FOB is active, providing user awareness (NEW).
 *   **Background Operation:** Works seamlessly in the background without a user interface.
 *   **Secure by Design:** Focuses on providing enhanced security for your Author-ID Key FOB.
 
@@ -19,8 +21,10 @@ This application requires the following permissions to be manually granted by th
 
 *   **Accessibility Service:** This permission is used solely to launch the "Author ID" application and to activate/deactivate the Key FOB.
 *   **Notification Access:** This permission is utilized to detect the active state of the Key FOB by monitoring the notification of the foreground service. The foreground service is initiated when the Key FOB is activated and terminated when the Key FOB is deactivated.
+*   **Foreground Service:** Required for the Key FOB monitoring service that runs while the Key FOB is active (automatically granted).
+*   **Wake Lock:** Used to detect screen state changes for automatic Key FOB deactivation (automatically granted).
 
-**Note:** Granting these permissions is essential for the app to function as intended. Instructions on how to grant these permissions can typically be found in your device's Accessibility and Notification Access settings.
+**Note:** Granting these permissions is essential for the app to function as intended. Instructions on how to grant these permissions can typically be found in your device's Accessibility and Notification Access settings. The Foreground Service and Wake Lock permissions are automatically granted during installation.
 
 ## Installation
 
@@ -59,14 +63,18 @@ After installing the application, you will need to manually grant the following 
     *   Choose `Notification access`.
     *   Find `Author ID Assistant` in the list of apps and enable it.
     
+## Recent Updates
+
+*   **✅ Foreground Service with WakeLock (Implemented):** The app now starts a foreground service upon Key FOB activation that monitors screen state. The Key FOB is automatically deactivated when the screen turns off, eliminating the security vulnerability where the Key FOB could remain active indefinitely.
+
 ## Future Enhancements
 
 We are continuously working to improve the Author-ID-Assistant. Potential future enhancements include:
 
-*   **Foreground Service with WakeLock:** Start the foreground service upon Key FOB activation to enable Key FOB deactivation when the screen is shutting off, utilizing WakeLock.
 *   **Bluetooth Connectivity Trigger:** Activate the Key FOB when the car's Bluetooth is connected.
 *   **Android Auto Integration:** Activate the Key FOB when Android Auto is connected.
 *   **Customizable Settings:** Introduce a settings dialog allowing users to configure when and for how long the Key FOB should be activated.
+*   **Location-Based Activation:** Enable Key FOB based on trusted location zones.
 
 ## Contributing
 

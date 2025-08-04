@@ -37,14 +37,26 @@ public class AppState {
         if (shouldActivate) {
             cancelAllTimers();
 
+            // Start the foreground service to monitor screen state
+            KeyFobMonitorService.startMonitoring(context);
+            Log.d(TAG, "Started KeyFobMonitorService for screen state monitoring");
+
             // Start a 30-seconds timer
             startTimer(() -> {
                 timers--;
                 Log.d(TAG, "30-seconds timer finished. Attempting to unccheck button.");
                 isKeyFobActionPending = true;
                 shouldActivate = false;
+                
+                // Stop monitoring service when deactivating
+                KeyFobMonitorService.stopMonitoring(context);
+                
                 proceedWithTheActivity(context);
             }, 30000);
+        } else {
+            // If we're deactivating, stop the monitoring service
+            KeyFobMonitorService.stopMonitoring(context);
+            Log.d(TAG, "Stopped KeyFobMonitorService - Key FOB deactivating");
         }
     }
 
