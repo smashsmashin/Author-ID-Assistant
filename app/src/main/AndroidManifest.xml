@@ -1,12 +1,28 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="app.smashsmashin.authoridassistant">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Required for posting notifications on Android 13+ -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
         android:allowBackup="true"
         android:label="Author ID Assistant"
         android:supportsRtl="true"
         android:enabled="true"
+        android:icon="@android:drawable/ic_menu_preferences"
         android:theme="@android:style/Theme.DeviceDefault">
+
+        <!-- Settings Activity for configuration -->
+        <activity
+            android:name=".SettingsActivity"
+            android:label="@string/settings_title"
+            android:exported="true"
+            android:theme="@android:style/Theme.DeviceDefault.Dialog">
+            <!-- Allow launching from notifications and intents -->
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
 
         <service
             android:name=".MyAccessibilityService"

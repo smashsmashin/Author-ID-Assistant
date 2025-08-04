@@ -1,0 +1,480 @@
+package app.smashsmashin.authoridassistant;
+
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.PendingIntent;
+import android.content.Context;
+import android.content.Intent;
+import android.os.Build;
+import androidx.test.core.app.ApplicationProvider;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import org.robolectric.RobolectricTestRunner;
+import org.robolectric.annotation.Config;
+
+import static org.junit.Assert.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
+
+/**
+ * Comprehensive unit tests for NotificationManager class.
+ * Tests notification creation, channel management, settings integration, and system-level checks.
+ */
+@RunWith(RobolectricTestRunner.class)
+@Config(sdk = 28)
+public class NotificationManagerTest {
+
+    @Mock
+    private Context mockContext;
+    
+    @Mock
+    private android.app.NotificationManager mockSystemNotificationManager;
+    
+    @Mock
+    private SettingsManager mockSettingsManager;
+    
+    @Mock
+    private SettingsManager.AppSettings mockSettings;
+    
+    private Context realContext;
+    private NotificationManager notificationManager;
+    
+    @Before
+    public void setUp() {
+        MockitoAnnotations.openMocks(this);
+        
+        // Reset SettingsManager singleton
+        SettingsManager.resetInstanceForTesting();
+        
+        // Get real context for some tests
+        realContext = ApplicationProvider.getApplicationContext();
+        
+        // Set up mock context behavior
+        when(mockContext.getApplicationContext()).thenReturn(mockContext);
+        when(mockContext.getSystemService(Context.NOTIFICATION_SERVICE))
+            .thenReturn(mockSystemNotificationManager);
+        when(mockContext.getString(anyInt())).thenReturn("Test String");
+        
+        // Set up mock settings behavior
+        when(mockSettings.notificationsEnabled).thenReturn(true);
+        when(mockSettingsManager.getSettings()).thenReturn(mockSettings);
+        when(mockSettingsManager.areNotificationsEnabled()).thenReturn(true);
+    }
+    
+    @After
+    public void tearDown() {
+        SettingsManager.resetInstanceForTesting();
+    }
+    
+    // ========== Constructor and Initialization Tests ==========
+    
+    @Test
+    public void testConstructorInitialization() {
+        notificationManager = new NotificationManager(mockContext);
+        
+        // Verify system notification manager was retrieved
+        verify(mockContext).getSystemService(Context.NOTIFICATION_SERVICE);
+        
+        // Verify settings manager was initialized
+        // Note: Due to singleton pattern, this would create a real SettingsManager instance
+        assertNotNull("NotificationManager should be created", notificationManager);
+    }
+    
+    @Test
+    public void testConstructorWithRealContext() {
+        // Test with real context to ensure no crashes
+        notificationManager = new NotificationManager(realContext);
+        assertNotNull("Should create with real context", notificationManager);
+    }
+    
+    // ========== Notification Channel Tests ==========
+    
+    @Test
+    @Config(sdk = Build.VERSION_CODES.O)
+    public void testCreateNotificationChannels_AndroidO() {
+        notificationManager = new NotificationManager(mockContext);
+        
+        // Verify both channels were created
+        ArgumentCaptor<NotificationChannel> channelCaptor = 
+            ArgumentCaptor.forClass(NotificationChannel.class);
+        verify(mockSystemNotificationManager, times(2))
+            .createNotificationChannel(channelCaptor.capture());
+        
+        // Verify main channel
+        NotificationChannel mainChannel = channelCaptor.getAllValues().get(0);
+        assertEquals("Main channel ID should match", 
+                    "author_id_assistant_channel", mainChannel.getId());
+        assertEquals("Main channel importance should be default", 
+                    android.app.NotificationManager.IMPORTANCE_DEFAULT, 
+                    mainChannel.getImportance());
+        assertFalse("Main channel should not show badge", mainChannel.canShowBadge());
+        
+        // Verify settings channel
+        NotificationChannel settingsChannel = channelCaptor.getAllValues().get(1);
+        assertEquals("Settings channel ID should match", 
+                    "author_id_assistant_settings_channel", settingsChannel.getId());
+        assertEquals("Settings channel importance should be low", 
+                    android.app.NotificationManager.IMPORTANCE_LOW, 
+                    settingsChannel.getImportance());
+        assertFalse("Settings channel should not show badge", settingsChannel.canShowBadge());
+    }
+    
+    @Test
+    @Config(sdk = Build.VERSION_CODES.N)
+    public void testCreateNotificationChannels_PreAndroidO() {
+        notificationManager = new NotificationManager(mockContext);
+        
+        // Verify no channels were created for pre-O
+        verify(mockSystemNotificationManager, never())
+            .createNotificationChannel(any(NotificationChannel.class));
+    }
+    
+    // ========== Settings Notification Tests ==========
+    
+    @Test
+    public void testShowSettingsNotification_NotificationsEnabled() {
+        // Mock SettingsManager to return instance with notifications enabled
+        SettingsManager mockSettingsManagerInstance = mock(SettingsManager.class);
+        when(mockSettingsManagerInstance.areNotificationsEnabled()).thenReturn(true);
+        
+        notificationManager = new NotificationManager(mockContext);
+        notificationManager.showSettingsNotification();
+        
+        // Verify notification was shown
+        verify(mockSystemNotificationManager).notify(eq(1001), any(Notification.class));
+    }
+    
+    @Test
+    public void testShowSettingsNotification_NotificationsDisabled() {
+        // Mock SettingsManager to return instance with notifications disabled
+        SettingsManager mockSettingsManagerInstance = mock(SettingsManager.class);
+        when(mockSettingsManagerInstance.areNotificationsEnabled()).thenReturn(false);
+        
+        notificationManager = new NotificationManager(mockContext);
+        notificationManager.showSettingsNotification();
+        
+        // Verify no notification was shown
+        verify(mockSystemNotificationManager, never()).notify(anyInt(), any(Notification.class));
+    }
+    
+    @Test
+    public void testShowSettingsNotification_PendingIntentCreation() {
+        notificationManager = new NotificationManager(mockContext);
+        notificationManager.showSettingsNotification();
+        
+        // Verify intent creation (implicit through PendingIntent.getActivity call)
+        // This test ensures the method completes without throwing exceptions
+        verify(mockSystemNotificationManager).notify(eq(1001), any(Notification.class));
+    }
+    
+    @Test
+    @Config(sdk = Build.VERSION_CODES.O)
+    public void testSettingsNotificationBuilder_AndroidO() {
+        notificationManager = new NotificationManager(mockContext);
+        notificationManager.showSettingsNotification();
+        
+        ArgumentCaptor<Notification> notificationCaptor = 
+            ArgumentCaptor.forClass(Notification.class);
+        verify(mockSystemNotificationManager).notify(eq(1001), notificationCaptor.capture());
+        
+        Notification notification = notificationCaptor.getValue();
+        assertNotNull("Notification should not be null", notification);
+    }
+    
+    @Test
+    @Config(sdk = Build.VERSION_CODES.N)
+    public void testSettingsNotificationBuilder_PreAndroidO() {
+        notificationManager = new NotificationManager(mockContext);
+        notificationManager.showSettingsNotification();
+        
+        ArgumentCaptor<Notification> notificationCaptor = 
+            ArgumentCaptor.forClass(Notification.class);
+        verify(mockSystemNotificationManager).notify(eq(1001), notificationCaptor.capture());
+        
+        Notification notification = notificationCaptor.getValue();
+        assertNotNull("Notification should not be null", notification);
+    }
+    
+    // ========== Hide Notifications Tests ==========
+    
+    @Test
+    public void testHideSettingsNotification() {
+        notificationManager = new NotificationManager(mockContext);
+        notificationManager.hideSettingsNotification();
+        
+        verify(mockSystemNotificationManager).cancel(1001);
+    }
+    
+    @Test
+    public void testHideAllNotifications() {
+        notificationManager = new NotificationManager(mockContext);
+        notificationManager.hideAllNotifications();
+        
+        verify(mockSystemNotificationManager).cancelAll();
+    }
+    
+    // ========== Status Notification Tests ==========
+    
+    @Test
+    public void testShowStatusNotification_NotificationsEnabled() {
+        SettingsManager mockSettingsManagerInstance = mock(SettingsManager.class);
+        when(mockSettingsManagerInstance.areNotificationsEnabled()).thenReturn(true);
+        
+        notificationManager = new NotificationManager(mockContext);
+        notificationManager.showStatusNotification("Test Title", "Test Message", false);
+        
+        verify(mockSystemNotificationManager).notify(eq(1002), any(Notification.class));
+    }
+    
+    @Test
+    public void testShowStatusNotification_NotificationsDisabled() {
+        SettingsManager mockSettingsManagerInstance = mock(SettingsManager.class);
+        when(mockSettingsManagerInstance.areNotificationsEnabled()).thenReturn(false);
+        
+        notificationManager = new NotificationManager(mockContext);
+        notificationManager.showStatusNotification("Test Title", "Test Message", false);
+        
+        verify(mockSystemNotificationManager, never()).notify(anyInt(), any(Notification.class));
+    }
+    
+    @Test
+    public void testShowStatusNotification_OngoingTrue() {
+        notificationManager = new NotificationManager(mockContext);
+        notificationManager.showStatusNotification("Test Title", "Test Message", true);
+        
+        ArgumentCaptor<Notification> notificationCaptor = 
+            ArgumentCaptor.forClass(Notification.class);
+        verify(mockSystemNotificationManager).notify(eq(1002), notificationCaptor.capture());
+        
+        Notification notification = notificationCaptor.getValue();
+        assertTrue("Ongoing notification should have FLAG_ONGOING_EVENT", 
+                  (notification.flags & Notification.FLAG_ONGOING_EVENT) != 0);
+    }
+    
+    @Test
+    public void testShowStatusNotification_OngoingFalse() {
+        notificationManager = new NotificationManager(mockContext);
+        notificationManager.showStatusNotification("Test Title", "Test Message", false);
+        
+        ArgumentCaptor<Notification> notificationCaptor = 
+            ArgumentCaptor.forClass(Notification.class);
+        verify(mockSystemNotificationManager).notify(eq(1002), notificationCaptor.capture());
+        
+        Notification notification = notificationCaptor.getValue();
+        assertEquals("Non-ongoing notification should not have FLAG_ONGOING_EVENT", 
+                    0, notification.flags & Notification.FLAG_ONGOING_EVENT);
+    }
+    
+    @Test
+    @Config(sdk = Build.VERSION_CODES.O)
+    public void testStatusNotificationBuilder_AndroidO() {
+        notificationManager = new NotificationManager(mockContext);
+        notificationManager.showStatusNotification("Test Title", "Test Message", false);
+        
+        ArgumentCaptor<Notification> notificationCaptor = 
+            ArgumentCaptor.forClass(Notification.class);
+        verify(mockSystemNotificationManager).notify(eq(1002), notificationCaptor.capture());
+        
+        Notification notification = notificationCaptor.getValue();
+        assertNotNull("Status notification should not be null", notification);
+    }
+    
+    @Test
+    @Config(sdk = Build.VERSION_CODES.N)
+    public void testStatusNotificationBuilder_PreAndroidO() {
+        notificationManager = new NotificationManager(mockContext);
+        notificationManager.showStatusNotification("Test Title", "Test Message", false);
+        
+        ArgumentCaptor<Notification> notificationCaptor = 
+            ArgumentCaptor.forClass(Notification.class);
+        verify(mockSystemNotificationManager).notify(eq(1002), notificationCaptor.capture());
+        
+        Notification notification = notificationCaptor.getValue();
+        assertNotNull("Status notification should not be null", notification);
+    }
+    
+    // ========== System-Level Notification Tests ==========
+    
+    @Test
+    @Config(sdk = Build.VERSION_CODES.N)
+    public void testAreNotificationsEnabledAtSystemLevel_AndroidN() {
+        when(mockSystemNotificationManager.areNotificationsEnabled()).thenReturn(true);
+        
+        notificationManager = new NotificationManager(mockContext);
+        boolean result = notificationManager.areNotificationsEnabledAtSystemLevel();
+        
+        assertTrue("Should return true when system allows notifications", result);
+        verify(mockSystemNotificationManager).areNotificationsEnabled();
+    }
+    
+    @Test
+    @Config(sdk = Build.VERSION_CODES.N)
+    public void testAreNotificationsEnabledAtSystemLevel_AndroidN_Disabled() {
+        when(mockSystemNotificationManager.areNotificationsEnabled()).thenReturn(false);
+        
+        notificationManager = new NotificationManager(mockContext);
+        boolean result = notificationManager.areNotificationsEnabledAtSystemLevel();
+        
+        assertFalse("Should return false when system blocks notifications", result);
+        verify(mockSystemNotificationManager).areNotificationsEnabled();
+    }
+    
+    @Test
+    @Config(sdk = Build.VERSION_CODES.M)
+    public void testAreNotificationsEnabledAtSystemLevel_PreAndroidN() {
+        notificationManager = new NotificationManager(mockContext);
+        boolean result = notificationManager.areNotificationsEnabledAtSystemLevel();
+        
+        assertTrue("Should assume enabled for older Android versions", result);
+        // Should not call areNotificationsEnabled() for older versions
+        verify(mockSystemNotificationManager, never()).areNotificationsEnabled();
+    }
+    
+    // ========== Notification Status Summary Tests ==========
+    
+    @Test
+    public void testGetNotificationStatusSummary_AppDisabled() {
+        SettingsManager mockSettingsManagerInstance = mock(SettingsManager.class);
+        when(mockSettingsManagerInstance.areNotificationsEnabled()).thenReturn(false);
+        
+        notificationManager = new NotificationManager(mockContext);
+        String summary = notificationManager.getNotificationStatusSummary();
+        
+        assertEquals("Should show app disabled message", "Disabled in app settings", summary);
+    }
+    
+    @Test
+    @Config(sdk = Build.VERSION_CODES.N)
+    public void testGetNotificationStatusSummary_SystemDisabled() {
+        SettingsManager mockSettingsManagerInstance = mock(SettingsManager.class);
+        when(mockSettingsManagerInstance.areNotificationsEnabled()).thenReturn(true);
+        when(mockSystemNotificationManager.areNotificationsEnabled()).thenReturn(false);
+        
+        notificationManager = new NotificationManager(mockContext);
+        String summary = notificationManager.getNotificationStatusSummary();
+        
+        assertEquals("Should show system disabled message", "Disabled in system settings", summary);
+    }
+    
+    @Test
+    @Config(sdk = Build.VERSION_CODES.N)
+    public void testGetNotificationStatusSummary_Enabled() {
+        SettingsManager mockSettingsManagerInstance = mock(SettingsManager.class);
+        when(mockSettingsManagerInstance.areNotificationsEnabled()).thenReturn(true);
+        when(mockSystemNotificationManager.areNotificationsEnabled()).thenReturn(true);
+        
+        notificationManager = new NotificationManager(mockContext);
+        String summary = notificationManager.getNotificationStatusSummary();
+        
+        assertEquals("Should show enabled message", "Enabled", summary);
+    }
+    
+    @Test
+    @Config(sdk = Build.VERSION_CODES.M)
+    public void testGetNotificationStatusSummary_PreAndroidN_Enabled() {
+        SettingsManager mockSettingsManagerInstance = mock(SettingsManager.class);
+        when(mockSettingsManagerInstance.areNotificationsEnabled()).thenReturn(true);
+        
+        notificationManager = new NotificationManager(mockContext);
+        String summary = notificationManager.getNotificationStatusSummary();
+        
+        assertEquals("Should show enabled for older Android versions", "Enabled", summary);
+    }
+    
+    // ========== Edge Cases and Error Handling ==========
+    
+    @Test
+    public void testNullContextHandling() {
+        // The constructor uses context.getApplicationContext(), so test that behavior
+        when(mockContext.getApplicationContext()).thenReturn(mockContext);
+        
+        notificationManager = new NotificationManager(mockContext);
+        assertNotNull("Should handle context gracefully", notificationManager);
+    }
+    
+    @Test
+    public void testSystemNotificationManagerNull() {
+        when(mockContext.getSystemService(Context.NOTIFICATION_SERVICE)).thenReturn(null);
+        
+        // Should not crash even if system service is null
+        try {
+            notificationManager = new NotificationManager(mockContext);
+            // Try to show notification - should handle null gracefully
+            notificationManager.showSettingsNotification();
+        } catch (NullPointerException e) {
+            fail("Should handle null NotificationManager gracefully");
+        }
+    }
+    
+    @Test
+    public void testNotificationWithEmptyStrings() {
+        notificationManager = new NotificationManager(mockContext);
+        
+        // Test with empty title and message
+        notificationManager.showStatusNotification("", "", false);
+        
+        // Should not crash and should still call notify
+        verify(mockSystemNotificationManager).notify(eq(1002), any(Notification.class));
+    }
+    
+    @Test
+    public void testNotificationWithNullStrings() {
+        notificationManager = new NotificationManager(mockContext);
+        
+        // Test with null title and message
+        notificationManager.showStatusNotification(null, null, false);
+        
+        // Should not crash and should still call notify
+        verify(mockSystemNotificationManager).notify(eq(1002), any(Notification.class));
+    }
+    
+    @Test
+    public void testSettingsManagerIntegration() {
+        // Test that NotificationManager properly integrates with SettingsManager
+        notificationManager = new NotificationManager(realContext);
+        
+        // This test ensures the SettingsManager singleton is properly initialized
+        // and that the NotificationManager can access its methods without errors
+        String summary = notificationManager.getNotificationStatusSummary();
+        assertNotNull("Should get status summary", summary);
+    }
+    
+    @Test
+    public void testMultipleNotificationCalls() {
+        notificationManager = new NotificationManager(mockContext);
+        
+        // Show multiple notifications
+        notificationManager.showSettingsNotification();
+        notificationManager.showStatusNotification("Title 1", "Message 1", false);
+        notificationManager.showStatusNotification("Title 2", "Message 2", true);
+        
+        // Verify multiple calls work
+        verify(mockSystemNotificationManager, times(3)).notify(anyInt(), any(Notification.class));
+        
+        // Hide all
+        notificationManager.hideAllNotifications();
+        verify(mockSystemNotificationManager).cancelAll();
+    }
+    
+    @Test
+    public void testNotificationIdConsistency() {
+        notificationManager = new NotificationManager(mockContext);
+        
+        // Show settings notification
+        notificationManager.showSettingsNotification();
+        verify(mockSystemNotificationManager).notify(eq(1001), any(Notification.class));
+        
+        // Show status notification (should use 1002)
+        notificationManager.showStatusNotification("Test", "Test", false);
+        verify(mockSystemNotificationManager).notify(eq(1002), any(Notification.class));
+        
+        // Hide settings notification
+        notificationManager.hideSettingsNotification();
+        verify(mockSystemNotificationManager).cancel(1001);
+    }
+}

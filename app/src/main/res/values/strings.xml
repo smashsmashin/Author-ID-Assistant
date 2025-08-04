@@ -1,5 +1,51 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Author ID Assistant</string>
     <string name="accessibility_service_description">This service allows the app to click a button on Author ID app\'s screen.</string>
+    
+    <!-- Settings Activity -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_notification_title">Author ID Assistant Settings</string>
+    <string name="settings_notification_text">Tap to configure app preferences</string>
+    <string name="settings_notification_action">Settings</string>
+    
+    <!-- Trigger Settings -->
+    <string name="triggers_section_title">Activation Triggers</string>
+    <string name="wireless_charging_title">Wireless Charging</string>
+    <string name="wireless_charging_summary">Activate Key FOB when device is placed on wireless charger</string>
+    <string name="bluetooth_title">Bluetooth Connection</string>
+    <string name="bluetooth_summary">Activate Key FOB when connected to specific Bluetooth devices (coming soon)</string>
+    <string name="android_auto_title">Android Auto</string>
+    <string name="android_auto_summary">Activate Key FOB when Android Auto is connected (coming soon)</string>
+    
+    <!-- Timeout Settings -->
+    <string name="timeout_section_title">Key FOB Settings</string>
+    <string name="timeout_title">Auto-deactivation Timeout</string>
+    <string name="timeout_summary">How long to keep Key FOB active before automatically deactivating</string>
+    <string name="timeout_dialog_title">Set Timeout Duration</string>
+    <string name="timeout_dialog_message">Enter timeout in seconds (5-300):</string>
+    <string name="timeout_format">%d seconds</string>
+    
+    <!-- Notification Settings -->
+    <string name="notifications_section_title">Notifications</string>
+    <string name="notifications_title">Enable Notifications</string>
+    <string name="notifications_summary">Show notifications for app status and settings access</string>
+    
+    <!-- Advanced Settings -->
+    <string name="advanced_section_title">Advanced</string>
+    <string name="debug_logging_title">Debug Logging</string>
+    <string name="debug_logging_summary">Enable detailed logging for troubleshooting</string>
+    <string name="reset_settings_title">Reset to Defaults</string>
+    <string name="reset_settings_summary">Reset all settings to their default values</string>
+    <string name="reset_confirm_title">Reset Settings</string>
+    <string name="reset_confirm_message">Are you sure you want to reset all settings to their default values?</string>
+    
+    <!-- Dialog Actions -->
+    <string name="cancel">Cancel</string>
+    <string name="reset">Reset</string>
+    <string name="save">Save</string>
+    
+    <!-- Error Messages -->
+    <string name="invalid_timeout">Invalid timeout value. Please enter a number between 5 and 300.</string>
+    <string name="settings_saved">Settings saved</string>
+    <string name="settings_reset">Settings reset to defaults</string>
 </resources>

@@ -81,6 +81,13 @@ public class MyAccessibilityService extends AccessibilityService {
   protected void onServiceConnected() {
     super.onServiceConnected();
     Log.d(TAG, "Accessibility service connected (or restarted after boot).");
+    
+    // Initialize AppState with settings
+    AppState.initialize(this);
+    
+    // Show settings notification for easy access
+    AppState.showSettingsNotification(this);
+    
     // Register broadcast receiver
     IntentFilter filter = new IntentFilter();
     filter.addAction(Intent.ACTION_SCREEN_ON);
@@ -96,7 +103,12 @@ public class MyAccessibilityService extends AccessibilityService {
   @Override
   public void onDestroy() {
     unregisterReceiver(requestReceiver);
+    
+    // Clean up notifications when service is destroyed
+    AppState.hideAllNotifications(this);
+    
     super.onDestroy();
+    Log.d(TAG, "Accessibility service destroyed");
   }
 
   private final BroadcastReceiver requestReceiver = new BroadcastReceiver() {
@@ -108,8 +120,17 @@ public class MyAccessibilityService extends AccessibilityService {
     public void onReceive(Context context, Intent intent) {
       String action = intent.getAction();
       Log.d(TAG, "BroadcastReceiver: Received action: " + action);
+      
+      // Get settings manager to check if triggers are enabled
+      SettingsManager settingsManager = AppState.getSettingsManager(context);
 
       if (Intent.ACTION_BATTERY_CHANGED.equals(action) || Intent.ACTION_POWER_CONNECTED.equals(action)) {
+        // Only process wireless charging events if the trigger is enabled
+        if (!settingsManager.isWirelessChargingEnabled()) {
+          Log.d(TAG, "BroadcastReceiver: Wireless charging trigger disabled in settings.");
+          return;
+        }
+        
         int chargePlug = intent.getIntExtra(BatteryManager.EXTRA_PLUGGED, -1);
         boolean previouslyWirelessCharging = isWirelessChargingServiceScope;
         isWirelessChargingServiceScope = (chargePlug == BatteryManager.BATTERY_PLUGGED_WIRELESS);
@@ -140,21 +161,22 @@ public class MyAccessibilityService extends AccessibilityService {
       } else if (Intent.ACTION_USER_PRESENT.equals(action)) {
         Log.d(TAG, "BroadcastReceiver: Device unlocked by user.");
 
-        if (Boolean.TRUE.equals(isWirelessCharging(context))) {
+        // Only check wireless charging if the trigger is enabled
+        if (settingsManager.isWirelessChargingEnabled() && Boolean.TRUE.equals(isWirelessCharging(context))) {
           isWirelessChargingServiceScope = true;
         }
 
-        if (isWirelessChargingServiceScope && !activityLaunched) {
+        if (isWirelessChargingServiceScope && !activityLaunched && settingsManager.isWirelessChargingEnabled()) {
           Log.d(TAG, "BroadcastReceiver: Device unlocked while wireless charging. Triggering action.");
           AppState.shouldActivate = true;
           triggerAuthorIDActivity(context);
           activityLaunched = true; // Mark as launched
         } else {
-          if (isWirelessChargingServiceScope) {
+          if (isWirelessChargingServiceScope && settingsManager.isWirelessChargingEnabled()) {
             Log.d(TAG,
                 "BroadcastReceiver: Device unlocked, but action already triggered for this session.");
           } else {
-            Log.d(TAG, "BroadcastReceiver: Device unlocked but not on wireless charge.");
+            Log.d(TAG, "BroadcastReceiver: Device unlocked but not on wireless charge or trigger disabled.");
           }
 
           AppState.shouldActivate = false;

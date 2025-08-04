@@ -14,6 +14,11 @@ android {
         // No UI needed
     }
 
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
     if(project.hasProperty("signing.properties")
         && new File(project.property("signing.properties")).exists()) {
 
@@ -34,11 +39,21 @@ android {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            signingConfig signingConfigs.release
+            if(project.hasProperty("signing.properties")
+                && new File(project.property("signing.properties")).exists()) {
+                signingConfig signingConfigs.release
+            }
         }
     }
 }
 
 dependencies {
     implementation 'androidx.core:core:1.13.1'
+    implementation 'com.google.code.gson:gson:2.10.1'
+    
+    // Testing dependencies
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.robolectric:robolectric:4.10.3'
+    testImplementation 'org.mockito:mockito-core:5.5.0'
+    testImplementation 'androidx.test:core:1.5.0'
 }
