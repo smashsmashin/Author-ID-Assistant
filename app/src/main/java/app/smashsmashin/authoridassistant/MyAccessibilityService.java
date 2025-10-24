@@ -77,10 +77,19 @@ public class MyAccessibilityService extends AccessibilityService {
     Log.d(TAG, "Accessibility service interrupted.");
   }
 
+  private AndroidAutoStateManager androidAutoStateManager;
+  private Handler androidAutoCheckHandler;
+  private Runnable androidAutoCheckRunnable;
+
   @Override
   protected void onServiceConnected() {
     super.onServiceConnected();
     Log.d(TAG, "Accessibility service connected (or restarted after boot).");
+    
+    // Initialize Android Auto detection
+    androidAutoStateManager = AndroidAutoStateManager.getInstance(this);
+    androidAutoCheckHandler = new Handler(Looper.getMainLooper());
+    
     // Register broadcast receiver
     IntentFilter filter = new IntentFilter();
     filter.addAction(Intent.ACTION_SCREEN_ON);
@@ -91,12 +100,69 @@ public class MyAccessibilityService extends AccessibilityService {
     filter.addAction(Intent.ACTION_BATTERY_CHANGED);
 
     registerReceiver(requestReceiver, filter);
+    
+    // Start Android Auto monitoring
+    startAndroidAutoMonitoring();
   }
 
   @Override
   public void onDestroy() {
     unregisterReceiver(requestReceiver);
+    stopAndroidAutoMonitoring();
     super.onDestroy();
+  }
+  
+  /**
+   * Starts periodic Android Auto connection monitoring
+   */
+  private void startAndroidAutoMonitoring() {
+    if (androidAutoStateManager == null || !androidAutoStateManager.isAutoDetectionSupported()) {
+      Log.d(TAG, "Android Auto detection not supported on this device");
+      return;
+    }
+    
+    androidAutoCheckRunnable = new Runnable() {
+      @Override
+      public void run() {
+        try {
+          boolean autoConnected = androidAutoStateManager.checkAutoConnectionState();
+          
+          // Update trigger state if Android Auto connection changed
+          boolean currentState = AppState.androidAutoTriggerActive;
+          if (autoConnected != currentState) {
+            Log.d(TAG, "Android Auto connection state changed: " + autoConnected);
+            AppState.updateTriggerState(
+              MyAccessibilityService.this,
+              AppState.wirelessChargingActive,
+              AppState.bluetoothTriggerActive,
+              autoConnected
+            );
+          }
+          
+        } catch (Exception e) {
+          Log.w(TAG, "Error checking Android Auto state", e);
+        }
+        
+        // Schedule next check
+        if (androidAutoCheckHandler != null) {
+          androidAutoCheckHandler.postDelayed(this, 10000); // Check every 10 seconds
+        }
+      }
+    };
+    
+    // Start monitoring
+    androidAutoCheckHandler.post(androidAutoCheckRunnable);
+    Log.d(TAG, "Android Auto monitoring started");
+  }
+  
+  /**
+   * Stops Android Auto connection monitoring
+   */
+  private void stopAndroidAutoMonitoring() {
+    if (androidAutoCheckHandler != null && androidAutoCheckRunnable != null) {
+      androidAutoCheckHandler.removeCallbacks(androidAutoCheckRunnable);
+      Log.d(TAG, "Android Auto monitoring stopped");
+    }
   }
 
   private final BroadcastReceiver requestReceiver = new BroadcastReceiver() {

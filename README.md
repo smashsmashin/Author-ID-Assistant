@@ -9,7 +9,9 @@ This application operates discreetly in the background, requiring specific user-
 ## Features
 
 *   **Conditional Key FOB Activation:** Automatically enables Author-ID Key FOB for a limited time (30 seconds) upon specific unlock conditions related to wireless charging.
+*   **Android Auto Integration:** NEW! Automatically activates Key FOB when Android Auto is connected to your car.
 *   **Enhanced Security:** Disables Key FOB when not actively charging or unlocking under the specified conditions.
+*   **Triple Activation Triggers:** Supports wireless charging, car Bluetooth connectivity, and Android Auto as activation triggers.
 *   **Background Operation:** Works seamlessly in the background without a user interface.
 *   **Secure by Design:** Focuses on providing enhanced security for your Author-ID Key FOB.
 
@@ -58,14 +60,47 @@ After installing the application, you will need to manually grant the following 
     *   Select `Special access`.
     *   Choose `Notification access`.
     *   Find `Author ID Assistant` in the list of apps and enable it.
-    
+
+## How the Android Auto Feature Works
+
+### Automatic Detection
+
+The app continuously monitors for Android Auto connections using multiple detection methods:
+
+1. **Package State Detection:** Monitors if Android Auto is running in the foreground
+2. **Audio Routing Detection:** Detects when audio is being routed to car systems (Android 10+)
+3. **Bluetooth Profile Detection:** Identifies car-specific Bluetooth profiles (Android 12+)
+
+### Key FOB Activation
+
+The app activates your Key FOB when any of these conditions are met:
+- **Screen is ON** (traditional behavior), OR
+- **Car Bluetooth is connected** (car connectivity feature), OR  
+- **Android Auto is connected** (new feature)
+
+This triple-trigger system ensures your Key FOB is available when you're actively using your phone, when you're in your registered car, or when Android Auto is providing car integration.
+
+### Cross-Platform Compatibility
+
+- **Works across Android versions:** Graceful degradation from Android 6 to Android 14+
+- **Multiple car manufacturers:** Compatible with Honda, Toyota, BMW, Mercedes, Ford, Tesla, and others
+- **Various connection types:** Supports both wireless and wired Android Auto connections
+- **Battery optimized:** Intelligent detection intervals preserve device battery life
+
+### Security Features
+
+- **Multi-method detection:** Uses multiple detection techniques for reliability
+- **Confidence scoring:** Provides detection confidence levels for better accuracy
+- **Safe fallbacks:** Continues working even if some detection methods fail
+- **Privacy focused:** All detection happens locally on your device
+
 ## Future Enhancements
 
 We are continuously working to improve the Author-ID-Assistant. Potential future enhancements include:
 
-*   **Foreground Service with WakeLock:** Start the foreground service upon Key FOB activation to enable Key FOB deactivation when the screen is shutting off, utilizing WakeLock.
-*   **Bluetooth Connectivity Trigger:** Activate the Key FOB when the car's Bluetooth is connected.
-*   **Android Auto Integration:** Activate the Key FOB when Android Auto is connected.
+*   **Foreground Service with WakeLock:** ✅ COMPLETED - Start the foreground service upon Key FOB activation to enable Key FOB deactivation when the screen is shutting off, utilizing WakeLock.
+*   **Bluetooth Connectivity Trigger:** ✅ COMPLETED - Activate the Key FOB when the car's Bluetooth is connected.
+*   **Android Auto Integration:** ✅ COMPLETED - Activate the Key FOB when Android Auto is connected.
 *   **Customizable Settings:** Introduce a settings dialog allowing users to configure when and for how long the Key FOB should be activated.
 
 ## Contributing
