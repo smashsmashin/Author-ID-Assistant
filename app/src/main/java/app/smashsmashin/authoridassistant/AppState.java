@@ -30,6 +30,7 @@ public class AppState {
     }
 
     public static void triggerAuthorIDActivity(Context context) {
+        Log.d(TAG, "AppState: triggering activity. shouldActivate=" + shouldActivate);
         isKeyFobActionPending = true;
         proceedWithTheActivity(context);
 
@@ -40,7 +41,7 @@ public class AppState {
             // Start a 30-seconds timer
             startTimer(() -> {
                 timers--;
-                Log.d(TAG, "30-seconds timer finished. Attempting to unccheck button.");
+                Log.d(TAG, "30-seconds timer finished. Attempting to deactivate.");
                 isKeyFobActionPending = true;
                 shouldActivate = false;
                 proceedWithTheActivity(context);
