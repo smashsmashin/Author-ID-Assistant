@@ -25,51 +25,59 @@ public class MyAccessibilityService extends AccessibilityService {
     if (!AppState.isKeyFobActionPending) {
       return;
     }
-    // Log.d(TAG, "Accessibility event received: " + event.toString());
-    if (event == null || event.getClassName() == null)
-      return;
 
-    if (TARGET_CLASS.equals(event.getClassName().toString())) {
+    if (event == null) return;
+
+    // We care about events from the target package
+    CharSequence packageName = event.getPackageName();
+    if (packageName == null || !"com.dma.author.authorid".equals(packageName.toString())) {
+      return;
+    }
+
+    AccessibilityNodeInfo rootNode = getRootInActiveWindow();
+    if (rootNode == null) return;
+
+    if (findAndClickToggleButton(rootNode)) {
+      Log.d(TAG, "Action performed successfully. Clearing pending flag.");
       AppState.isKeyFobActionPending = false;
 
-      AccessibilityNodeInfo rootNode = getRootInActiveWindow();
-      findAndClickToggleButton(rootNode);
-
-      // Close the Author ID app
-      Log.d(TAG, "Performing global action back.");
-      performGlobalAction(GLOBAL_ACTION_BACK);
+      // Close the Author ID app after a short delay to ensure the action is processed
+      new Handler(Looper.getMainLooper()).postDelayed(() -> {
+        Log.d(TAG, "Performing global action back.");
+        performGlobalAction(GLOBAL_ACTION_BACK);
+      }, 500);
     }
+    rootNode.recycle();
   }
 
   private boolean findAndClickToggleButton(AccessibilityNodeInfo rootNode) {
-    boolean found = false;
-    if (rootNode != null) {
-      List<AccessibilityNodeInfo> nodes = rootNode.findAccessibilityNodeInfosByViewId(TOGGLE_BUTTON_ID);
-      if (nodes != null && !nodes.isEmpty()) {
-        found = true;
-        AccessibilityNodeInfo toggleButton = nodes.get(0);
-        Log.d(TAG, "ToggleButton found. Is checked: " + toggleButton.isChecked());
+    if (rootNode == null) return false;
 
-        if (AppState.shouldActivate && !toggleButton.isChecked()) {
-          Log.d(TAG, "ToggleButton is not checked. Performing click to activate.");
-          toggleButton.performAction(AccessibilityNodeInfo.ACTION_CLICK);
-        } else if (!AppState.shouldActivate && toggleButton.isChecked()) {
-          Log.d(TAG, "ToggleButton is checked. Performing click to deactivate.");
-          toggleButton.performAction(AccessibilityNodeInfo.ACTION_CLICK);
-        } else {
-          Log.d(TAG, "ToggleButton is already in the desired state. No action needed.");
-        }
+    List<AccessibilityNodeInfo> nodes = rootNode.findAccessibilityNodeInfosByViewId(TOGGLE_BUTTON_ID);
+    if (nodes != null && !nodes.isEmpty()) {
+      AccessibilityNodeInfo toggleButton = nodes.get(0);
+      boolean isChecked = toggleButton.isChecked();
+      Log.d(TAG, "ToggleButton found. Is checked: " + isChecked);
 
-        // Important: recycle when done
-        toggleButton.recycle();
+      boolean success = false;
+      if (AppState.shouldActivate && !isChecked) {
+        Log.d(TAG, "ToggleButton is not checked. Performing click to activate.");
+        success = toggleButton.performAction(AccessibilityNodeInfo.ACTION_CLICK);
+      } else if (!AppState.shouldActivate && isChecked) {
+        Log.d(TAG, "ToggleButton is checked. Performing click to deactivate.");
+        success = toggleButton.performAction(AccessibilityNodeInfo.ACTION_CLICK);
       } else {
-        Log.w(TAG, "ToggleButton with ID " + TOGGLE_BUTTON_ID + " not found.");
+        Log.d(TAG, "ToggleButton is already in the desired state. No action needed.");
+        success = true;
       }
 
-      // Important: recycle when done
-      rootNode.recycle();
+      toggleButton.recycle();
+      return success;
+    } else {
+      // Log only once in a while or use a different level to avoid spam
+      // Log.v(TAG, "ToggleButton with ID " + TOGGLE_BUTTON_ID + " not found in current window.");
+      return false;
     }
-    return found;
   }
 
   @Override
@@ -111,64 +119,60 @@ public class MyAccessibilityService extends AccessibilityService {
 
       if (Intent.ACTION_BATTERY_CHANGED.equals(action) || Intent.ACTION_POWER_CONNECTED.equals(action)) {
         int chargePlug = intent.getIntExtra(BatteryManager.EXTRA_PLUGGED, -1);
-        boolean previouslyWirelessCharging = isWirelessChargingServiceScope;
-        isWirelessChargingServiceScope = (chargePlug == BatteryManager.BATTERY_PLUGGED_WIRELESS);
+        boolean currentlyWireless = (chargePlug == BatteryManager.BATTERY_PLUGGED_WIRELESS);
+        boolean previouslyWireless = isWirelessChargingServiceScope;
+        isWirelessChargingServiceScope = currentlyWireless;
 
-        if (isWirelessChargingServiceScope != previouslyWirelessCharging
-            || Intent.ACTION_POWER_CONNECTED.equals(action)) {
-          Log.d(TAG, "BroadcastReceiver: Wireless charging: " + isWirelessChargingServiceScope);
+        if (isWirelessChargingServiceScope != previouslyWireless || Intent.ACTION_POWER_CONNECTED.equals(action)) {
+          Log.d(TAG, "BroadcastReceiver: Wireless charging status: " + isWirelessChargingServiceScope);
         }
 
         if (isWirelessChargingServiceScope) {
           if (isDeviceUnlocked(context)) {
             if (!activityLaunched) {
-              Log.d(TAG, "BroadcastReceiver: Device unlocked and wireless charging. Triggering action.");
+              Log.d(TAG, "BroadcastReceiver: Device unlocked and wireless charging. Triggering activation.");
               AppState.shouldActivate = true;
               triggerAuthorIDActivity(context);
-              activityLaunched = true; // Mark as launched
-            } else {
-              Log.d(TAG, "BroadcastReceiver: Action already triggered for this charging session.");
+              activityLaunched = true;
             }
           } else {
             Log.d(TAG, "BroadcastReceiver: Device is locked. Waiting for unlock.");
           }
         }
       } else if (Intent.ACTION_POWER_DISCONNECTED.equals(action)) {
+        Log.d(TAG, "BroadcastReceiver: Power disconnected. Ensuring deactivation.");
         isWirelessChargingServiceScope = false;
-        activityLaunched = false; // Reset the flag
-        Log.d(TAG, "BroadcastReceiver: Power disconnected. Resetting state.");
+        activityLaunched = false;
+        AppState.shouldActivate = false;
+        triggerAuthorIDActivity(context);
       } else if (Intent.ACTION_USER_PRESENT.equals(action)) {
         Log.d(TAG, "BroadcastReceiver: Device unlocked by user.");
 
-        if (Boolean.TRUE.equals(isWirelessCharging(context))) {
-          isWirelessChargingServiceScope = true;
-        }
+        boolean wireless = Boolean.TRUE.equals(isWirelessCharging(context));
+        isWirelessChargingServiceScope = wireless;
 
-        if (isWirelessChargingServiceScope && !activityLaunched) {
-          Log.d(TAG, "BroadcastReceiver: Device unlocked while wireless charging. Triggering action.");
+        if (wireless && !activityLaunched) {
+          Log.d(TAG, "BroadcastReceiver: Device unlocked while wireless charging. Triggering activation.");
           AppState.shouldActivate = true;
           triggerAuthorIDActivity(context);
-          activityLaunched = true; // Mark as launched
-        } else {
-          if (isWirelessChargingServiceScope) {
-            Log.d(TAG,
-                "BroadcastReceiver: Device unlocked, but action already triggered for this session.");
-          } else {
-            Log.d(TAG, "BroadcastReceiver: Device unlocked but not on wireless charge.");
+          activityLaunched = true;
+        } else if (AppState.isKeyFobActionPending || !wireless) {
+          // If deactivation (or activation) was pending but didn't finish, or if we're not charging,
+          // ensure we're in the right state.
+          if (!wireless) {
+              AppState.shouldActivate = false;
+              activityLaunched = false;
           }
-
-          AppState.shouldActivate = false;
           
-          AppState.isKeyFobActionPending = true;
+          Log.d(TAG, "BroadcastReceiver: Ensuring state on unlock. shouldActivate=" + AppState.shouldActivate);
           new Handler(Looper.getMainLooper()).postDelayed(() -> {
-            if (AppState.isKeyFobActionPending) {
-              AppState.isKeyFobActionPending = false;
-              triggerAuthorIDActivity(context);
-            }
+            triggerAuthorIDActivity(context);
           }, 500);
         }
       } else if (Intent.ACTION_SCREEN_OFF.equals(action)) {
-        AppState.cancelAllTimers();
+        // We don't necessarily want to cancel timers on screen off,
+        // because we want deactivation to happen even if screen is off.
+        // AppState.cancelAllTimers();
       }
     }
 
@@ -188,22 +192,35 @@ public class MyAccessibilityService extends AccessibilityService {
     }
 
     private void triggerAuthorIDActivity(Context context) {
-      if (findAndClickToggleButton(getRootInActiveWindow())) {
-        Log.d(TAG, "Toggle button found. No need to trigger Author ID activity.");
-        performGlobalAction(GLOBAL_ACTION_BACK);
+      AccessibilityNodeInfo rootNode = getRootInActiveWindow();
+      if (findAndClickToggleButton(rootNode)) {
+        Log.d(TAG, "Toggle button found and handled. No need to trigger Author ID activity.");
+        if (rootNode != null) rootNode.recycle();
+
+        // If we handled it, we can return to whatever was before after a short delay
+        new Handler(Looper.getMainLooper()).postDelayed(() -> {
+          performGlobalAction(GLOBAL_ACTION_BACK);
+        }, 500);
         return;
       }
-      Log.d(TAG, "Toggle button not found. Triggering Author ID activity.");
-      if (MyNotificationListenerService.getInstance().isPresent()
-          && MyNotificationListenerService.getInstance().get().isAuthorIDNotificationPresent()) {
-        if (AppState.shouldActivate) {
-          Log.d(TAG, "Key FOB activation requested, but it is already active.");
+      if (rootNode != null) rootNode.recycle();
+
+      Log.d(TAG, "Toggle button not found. Checking if state already matches via notification.");
+      boolean isAlreadyActive = MyNotificationListenerService.getInstance()
+          .map(MyNotificationListenerService::isAuthorIDNotificationPresent)
+          .orElse(false);
+
+      if (AppState.shouldActivate && isAlreadyActive) {
+          Log.d(TAG, "Key FOB activation requested, but it is already active (notification found).");
+          AppState.isKeyFobActionPending = false;
           return;
-        }
-      } else if (!AppState.shouldActivate) {
-        Log.d(TAG, "Key FOB deactivation requested, but it is already inactive.");
-        return;
+      } else if (!AppState.shouldActivate && !isAlreadyActive) {
+          Log.d(TAG, "Key FOB deactivation requested, but it is already inactive (no notification).");
+          AppState.isKeyFobActionPending = false;
+          return;
       }
+
+      Log.d(TAG, "Triggering Author ID activity.");
       AppState.triggerAuthorIDActivity(context);
     }
   };
